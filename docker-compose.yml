@@ -1,0 +1,126 @@
+# Docker Compose for sofia-phone
+# Complete production setup with FreeSWITCH
+
+version: '3.8'
+
+services:
+  # FreeSWITCH telephony server
+  freeswitch:
+    image: drachtio/drachtio-freeswitch-mrf:latest
+    container_name: sofia-freeswitch
+    restart: unless-stopped
+    ports:
+      - "5060:5060/udp"  # SIP
+      - "5080:5080/tcp"  # WebSocket (optional)
+      - "16384-16584:16384-16584/udp"  # RTP
+    volumes:
+      - ./config/freeswitch:/etc/freeswitch:ro
+      - freeswitch-data:/var/lib/freeswitch
+      - freeswitch-logs:/var/log/freeswitch
+    environment:
+      - FREESWITCH_LOG_LEVEL=INFO
+    networks:
+      - sofia-network
+    healthcheck:
+      test: ["CMD", "fs_cli", "-x", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # sofia-phone application
+  sofia-phone:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sofia-phone
+    restart: unless-stopped
+    ports:
+      - "8084:8084/tcp"  # ESL
+      - "8080:8080/tcp"  # Health checks
+      - "16384-16584:16384-16584/udp"  # RTP (shared with FreeSWITCH)
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    environment:
+      # General
+      - SOFIA_PHONE_ENV=production
+      - SOFIA_PHONE_DEBUG=false
+
+      # FreeSWITCH
+      - SOFIA_PHONE_ESL_HOST=0.0.0.0
+      - SOFIA_PHONE_ESL_PORT=8084
+      - FREESWITCH_HOST=freeswitch
+      - FREESWITCH_PORT=5060
+
+      # Session management
+      - SOFIA_PHONE_MAX_SESSIONS=100
+      - SOFIA_PHONE_SESSION_TIMEOUT=30
+
+      # Logging
+      - SOFIA_PHONE_LOG_LEVEL=INFO
+      - SOFIA_PHONE_LOG_FILE=/app/logs/sofia-phone.log
+      - SOFIA_PHONE_JSON_LOGS=true
+
+      # Health checks
+      - SOFIA_PHONE_HEALTH_CHECK=true
+      - SOFIA_PHONE_HEALTH_PORT=8080
+    networks:
+      - sofia-network
+    depends_on:
+      - freeswitch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Prometheus (optional - for monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sofia-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - sofia-network
+    profiles:
+      - monitoring
+
+  # Grafana (optional - for dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sofia-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - sofia-network
+    profiles:
+      - monitoring
+    depends_on:
+      - prometheus
+
+networks:
+  sofia-network:
+    driver: bridge
+
+volumes:
+  freeswitch-data:
+  freeswitch-logs:
+  prometheus-data:
+  grafana-data:
