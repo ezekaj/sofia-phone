@@ -45,10 +45,16 @@ async def main():
         voice_backend = SofiaVoiceBackend()
         logger.info("Using SofiaVoiceBackend (production)")
     except ImportError:
-        # Fall back to mock for testing
-        from tests.mocks.mock_voice_backend import MockVoiceBackend
-        voice_backend = MockVoiceBackend()
-        logger.warning("Using MockVoiceBackend (development/testing)")
+        # Fall back to memory-enabled mock for testing
+        try:
+            from tests.mocks.memory_voice_backend import MemoryEnabledVoiceBackend
+            voice_backend = MemoryEnabledVoiceBackend(enable_memory=True)
+            logger.info("Using MemoryEnabledVoiceBackend (development with memory)")
+        except ImportError:
+            # Final fallback to simple mock
+            from tests.mocks.mock_voice_backend import MockVoiceBackend
+            voice_backend = MockVoiceBackend()
+            logger.warning("Using MockVoiceBackend (development/testing)")
 
     # Initialize components
     error_recovery = ErrorRecoveryManager()

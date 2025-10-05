@@ -9,6 +9,7 @@ Tests session management functionality:
 - Metrics
 """
 import pytest
+import pytest_asyncio
 import asyncio
 from datetime import datetime, timedelta
 from sofia_phone.core.session_manager import (
@@ -18,7 +19,7 @@ from sofia_phone.core.session_manager import (
 )
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def manager():
     """Session manager fixture"""
     manager = SessionManager(max_sessions=10)

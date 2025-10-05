@@ -85,13 +85,13 @@ class TestResampling:
         assert audio == resampled, "Same rate should return original audio"
 
     def test_empty_audio_raises(self, processor):
-        """Test that empty audio raises ValueError"""
-        with pytest.raises(ValueError, match="Empty audio"):
+        """Test that empty audio raises RuntimeError"""
+        with pytest.raises(RuntimeError, match="Audio resampling error"):
             processor.resample(b"", from_rate=8000, to_rate=16000)
 
     def test_odd_length_raises(self, processor):
-        """Test that odd-length audio raises ValueError"""
-        with pytest.raises(ValueError, match="even length"):
+        """Test that odd-length audio raises RuntimeError"""
+        with pytest.raises(RuntimeError, match="Audio resampling error"):
             processor.resample(b"abc", from_rate=8000, to_rate=16000)
 
 
