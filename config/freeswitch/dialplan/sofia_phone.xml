@@ -1,0 +1,51 @@
+<!--
+  Sofia Phone Dialplan
+
+  Routes incoming calls to sofia-phone backend via Event Socket Layer.
+
+  Extension: Any call to this FreeSWITCH instance
+  Action: Connect to sofia-phone ESL handler
+
+  Copy this to: /opt/homebrew/etc/freeswitch/dialplan/public/
+-->
+
+<include>
+  <extension name="sofia_phone_handler">
+    <condition field="destination_number" expression="^(.*)$">
+      <!-- Answer the call immediately -->
+      <action application="answer"/>
+
+      <!-- Brief pause for audio setup -->
+      <action application="sleep" data="500"/>
+
+      <!-- Log call info -->
+      <action application="log" data="INFO Sofia-Phone: Incoming call from ${caller_id_number}"/>
+
+      <!-- Connect to sofia-phone Event Socket Layer handler -->
+      <!-- sofia-phone ESL handler will listen on localhost:8084 -->
+      <action application="socket" data="127.0.0.1:8084 async full"/>
+
+      <!-- If socket connection fails, play error message -->
+      <action application="playback" data="ivr/ivr-call_cannot_be_completed_as_dialed.wav"/>
+
+      <!-- Hangup -->
+      <action application="hangup"/>
+    </condition>
+  </extension>
+
+  <!-- Test extension: Echo test -->
+  <extension name="echo_test">
+    <condition field="destination_number" expression="^9999$">
+      <action application="answer"/>
+      <action application="echo"/>
+    </condition>
+  </extension>
+
+  <!-- Test extension: Hold music -->
+  <extension name="hold_music">
+    <condition field="destination_number" expression="^9998$">
+      <action application="answer"/>
+      <action application="playback" data="$${hold_music}"/>
+    </condition>
+  </extension>
+</include>
