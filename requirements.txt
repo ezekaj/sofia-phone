@@ -1,0 +1,17 @@
+# Core telephony
+eventsocket>=0.9.0          # FreeSWITCH Event Socket Layer
+greenlet>=2.0.0             # For ESL event handling
+
+# Audio processing
+numpy>=1.24.0               # Audio manipulation
+scipy>=1.10.0               # Audio resampling (8kHz ↔ 16kHz ↔ 24kHz)
+
+# Async support
+aiofiles>=23.0.0            # Async file I/O for call recording
+
+# Logging
+loguru>=0.7.0               # Better logging
+
+# Development/Testing
+pytest>=7.4.0               # Testing
+pytest-asyncio>=0.21.0      # Async tests
